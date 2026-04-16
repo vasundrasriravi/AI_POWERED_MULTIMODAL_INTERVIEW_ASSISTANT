@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interview Progress</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #f2f4f7; }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            margin: auto;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background: #2b4eff;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1 style="text-align:center;">📈 Interview Progress History</h1>
+
+<div class="card">
+    {% if history["attempts"] %}
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Date / Time</th>
+            <th>Total Accuracy %</th>
+            <th>Confidence %</th>
+            <th>Communication %</th>
+            <th>Answer Accuracy %</th>
+            <th>Fit Status</th>
+        </tr>
+        {% for att in history["attempts"] %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ att["timestamp"] }}</td>
+            <td>{{ att["total_accuracy"] }}</td>
+            <td>{{ att["confidence"] }}</td>
+            <td>{{ att["communication"] }}</td>
+            <td>{{ att["answer_accuracy"] }}</td>
+            <td>{{ att["fit_status"] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No interview attempts recorded yet.</p>
+    {% endif %}
+</div>
+
+</body>
+</html>

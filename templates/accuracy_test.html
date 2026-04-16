@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accuracy Test</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #f3f4f6; }
+        .box {
+            width: 70%; margin: auto; background: white; padding: 25px;
+            border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        textarea {
+            width: 80%; height: 90px; margin-top: 15px;
+            padding: 10px; font-size: 16px;
+        }
+        video { width: 450px; height: 300px; background: black; border-radius: 10px; }
+        button {
+            margin-top: 20px; padding: 12px 25px; font-size: 18px; 
+            background: #2563eb; color: white; border: none;
+            border-radius: 10px; cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+    <h1>System Accuracy Test</h1>
+    <p>Record your voice + face here to test Whisper, video emotion, and overall accuracy.</p>
+
+    <video id="preview" autoplay muted></video>
+
+    <br>
+    <button id="startBtn">🎤 Start Recording</button>
+    <textarea id="typed" placeholder="Type something OR speak your answer"></textarea>
+    <button id="submitBtn">Submit Test</button>
+
+    <h3>Test Output</h3>
+    <pre id="outputBox" style="text-align:left; background:#f6f6f6; padding:15px; border-radius:10px; height:300px; overflow:auto;"></pre>
+</div>
+
+<script>
+let stream, mediaRecorder;
+let chunks = [];
+let recording = false;
+
+// Start recording
+document.getElementById("startBtn").onclick = async () => {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById("preview").srcObject = stream;
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.start();
+
+    recording = true;
+    document.getElementById("outputBox").innerText = "Recording started...";
+};
+
+// Submit test
+document.getElementById("submitBtn").onclick = async () => {
+    if (recording) {
+        await new Promise(resolve => { mediaRecorder.onstop = resolve; mediaRecorder.stop(); });
+        stream.getTracks().forEach(t => t.stop());
+        recording = false;
+    }
+
+    let blob = new Blob(chunks, { type: "video/webm" });
+    chunks = [];
+
+    let formData = new FormData();
+    formData.append("video", blob, "test.webm");
+    formData.append("typed", document.getElementById("typed").value);
+
+    let res = await fetch("/accuracy_evaluate", {
+        method: "POST",
+        body: formData
+    });
+
+    let out = await res.json();
+    document.getElementById("outputBox").innerText = JSON.stringify(out, null, 4);
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Interview</title>
+
+    <style>
+        body { font-family: Arial; padding: 20px; background: #eef1f5; text-align: center; }
+        #videoPreview {
+            width: 420px;
+            height: 300px;
+            background: black;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+        textarea {
+            width: 350px;
+            height: 80px;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        button {
+            padding: 10px 22px;
+            margin: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #2b4eff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #coachBox {
+            padding: 12px;
+            background: white;
+            width: 380px;
+            margin: auto;
+            margin-top: 10px;
+            border-radius: 10px;
+            font-size: 15px;
+            color: #333;
+            font-weight: bold;
+        }
+        #meter {
+            width: 350px;
+            height: 10px;
+            background: #ddd;
+            border-radius: 20px;
+            margin: auto;
+            margin-top: 10px;
+        }
+        #meterFill {
+            height: 100%;
+            width: 5%;
+            border-radius: 20px;
+            background: green;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>🤖 AI Interview</h2>
+<img src="{{ url_for('static', filename='avatar.png') }}" width="120" style="border-radius:12px;">
+
+<h3 id="questionBox">{{ question }}</h3>
+<div id="indexBox" style="display:none;">{{ index }}</div>
+
+<video id="videoPreview" autoplay muted></video>
+
+<div id="coachBox">🎤 When you're ready, click "Start Recording" and answer clearly.</div>
+
+<div id="meter"><div id="meterFill"></div></div>
+
+<button id="startBtn">🎙 Start Recording</button>
+<textarea id="typedAnswer" placeholder="(Optional) Type your answer here..."></textarea>
+<button id="submitBtn">Submit</button>
+
+<script>
+// =============== 1. AI VOICE ASKS QUESTION ===============
+let questionText = document.getElementById("questionBox").innerText;
+let questionIndex = parseInt(document.getElementById("indexBox").innerText);
+
+function speak(text) {
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-US";
+    utter.pitch = 1;
+    utter.rate = 1;
+    utter.volume = 1;
+    speechSynthesis.speak(utter);
+}
+
+// Ask question at start
+speak(questionText);
+
+// =============== 2. RECORDING + COACH LOGIC ===============
+let mediaRecorder = null;
+let stream = null;
+let recordedChunks = [];
+let meterTimer = null;
+let analyser = null;
+let dataArray = null;
+let audioContext = null;
+
+let silenceCounter = 0;      // for silence >7s
+let lowVoiceCounter = 0;     // for soft voice >10s
+let lastCoachSpoken = 0;
+
+const nowMs = () => Date.now();
+
+function speakCoach(text) {
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-US";
+    utter.rate = 1.05;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+}
+
+// -------- START RECORDING --------
+document.getElementById("startBtn").onclick = async function () {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById("videoPreview").srcObject = stream;
+
+        mediaRecorder = new MediaRecorder(stream);
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.start();
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.fftSize);
+
+        startLiveMeter();
+
+        document.getElementById("coachBox").innerText = "🎙 Recording... Answer naturally.";
+        speakCoach("You can start answering now.");
+
+    } catch (err) {
+        alert("Camera or Microphone permission blocked!");
+        console.error(err);
+    }
+};
+
+// -------- LIVE AUDIO METER + SMART COACHING --------
+function startLiveMeter() {
+    meterTimer = setInterval(() => {
+        analyser.getByteTimeDomainData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            let v = (dataArray[i] - 128) / 128;
+            sum += v * v;
+        }
+        let rms = Math.sqrt(sum / dataArray.length);
+        let level = Math.min(1, rms * 10);
+
+        document.getElementById("meterFill").style.width = (level * 100).toFixed(0) + "%";
+
+        const now = nowMs();
+
+        // silent (<0.02) OR soft (0.02–0.08)
+        if (level < 0.02) { silenceCounter++; } else { silenceCounter = 0; }
+        if (level >= 0.02 && level < 0.08) { lowVoiceCounter++; } else { lowVoiceCounter = 0; }
+
+        // === VOICE COACHING ===
+
+        // Silence > 7s (500ms * 14)
+        if (silenceCounter === 14 && (now - lastCoachSpoken) > 6000) {
+            speakCoach("Please continue speaking.");
+            document.getElementById("coachBox").innerText = "⏳ Continue when ready...";
+            lastCoachSpoken = now;
+        }
+
+        // Silence > 10s
+        if (silenceCounter === 20 && (now - lastCoachSpoken) > 8000) {
+            speakCoach("Are you stuck? It's okay, continue when you are ready.");
+            document.getElementById("coachBox").innerText = "🤖 I'm waiting for your answer...";
+            lastCoachSpoken = now;
+        }
+
+        // Soft voice > 10s (500ms * 20)
+        if (lowVoiceCounter === 20 && (now - lastCoachSpoken) > 8000) {
+            speakCoach("Try speaking a little louder.");
+            document.getElementById("coachBox").innerText = "🔈 Speak louder so I can hear you clearly.";
+            lastCoachSpoken = now;
+        }
+
+    }, 500);
+}
+
+// -------- SUBMIT ANSWER --------
+document.getElementById("submitBtn").onclick = async function () {
+
+    if (!mediaRecorder) { // only typed
+        let fd = new FormData();
+        fd.append("typed", document.getElementById("typedAnswer").value);
+        fd.append("index", questionIndex);
+        fetch("/submit_answer", { method: "POST", body: fd }).then(() => window.location.href="/interview");
+        return;
+    }
+
+    await new Promise(res => { mediaRecorder.onstop = res; mediaRecorder.stop(); });
+
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    clearInterval(meterTimer);
+    if (audioContext) audioContext.close();
+
+    let blob = new Blob(recordedChunks, { type: "video/webm" });
+    recordedChunks = [];
+
+    let fd = new FormData();
+    fd.append("video", blob, "answer.webm");
+    fd.append("typed", document.getElementById("typedAnswer").value);
+    fd.append("index", questionIndex);
+
+    document.getElementById("coachBox").innerText = "⏳ Processing your answer...";
+    fetch("/submit_answer", { method: "POST", body: fd })
+    .then(() => window.location.href = "/interview");
+};
+</script>
+
+</body>
+</html>

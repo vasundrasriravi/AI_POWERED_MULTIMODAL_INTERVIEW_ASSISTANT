@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Virtual Interviewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <h1 class="title">AI Virtual Interviewer</h1>
+
+    <div class="question-card">
+        <h2>Upload Resume & Generate Questions</h2>
+
+        <form action="/" method="POST" enctype="multipart/form-data">
+
+            <label>Upload Resume (PDF)</label><br>
+            <input type="file" name="resume" required><br><br>
+
+            <label>Job Role</label><br>
+            <input type="text" name="role" placeholder="Data Scientist" required><br><br>
+
+            <label>Technical Questions</label><br>
+            <input type="number" name="tech_n" value="3" min="1" max="10"><br><br>
+
+            <label>HR Questions</label><br>
+            <input type="number" name="hr_n" value="2" min="1" max="10"><br><br>
+
+            <button class="btn">Generate Questions</button>
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>

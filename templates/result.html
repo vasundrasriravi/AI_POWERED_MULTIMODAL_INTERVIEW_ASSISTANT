@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interview Results</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #f2f4f7; }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 70%;
+            margin: auto;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+        h2 { color: #2b4eff; }
+        button {
+            padding: 12px 25px; background: #2b4eff; color: white;
+            border: none; border-radius: 10px; cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1 style="text-align:center;">🎉 Interview Completed</h1>
+
+<div class="card">
+    <h2>Overall NLP Scores</h2>
+    <p><b>Confidence:</b> {{ result["overall_scores"]["confidence"] }}%</p>
+    <p><b>Communication:</b> {{ result["overall_scores"]["communication"] }}%</p>
+    <p><b>Answer Accuracy:</b> {{ result["overall_scores"]["accuracy"] }}%</p>
+</div>
+
+<div class="card">
+    <h2>Final Evaluation</h2>
+    <p><b>Total Accuracy Score:</b> {{ result["total_accuracy"] }}%</p>
+    <p><b>Fit Recommendation:</b> {{ result["fit_status"] }}</p>
+</div>
+
+{% for item in result["per_question"] %}
+<div class="card">
+    <h2>Q{{ loop.index }}</h2>
+
+    <p><b>Question:</b> {{ item["question"] }}</p>
+    <p><b>Your Answer:</b> {{ item["answer"] }}</p>
+
+    <p><b>Answer Accuracy:</b> {{ item["accuracy"] }}%</p>
+    <p><b>Communication Score:</b> {{ item["communication"] }}%</p>
+    <p><b>Voice Tone:</b> {{ item["voice_tone"] }}</p>
+    <p><b>Facial Expression:</b> {{ item["facial_expression"] }}</p>
+
+    <p><b>Feedback:</b> {{ item["comment"] }}</p>
+    <p><b>Score:</b> {{ item["score"] }}/10</p>
+</div>
+{% endfor %}
+
+<div class="card" style="text-align:center;">
+    <a href="/download?file={{ pdf_path }}">
+        <button>Download Full PDF Report</button>
+    </a>
+</div>
+
+<div class="card" style="text-align:center;">
+    <a href="/progress">
+        <button>View Progress History</button>
+    </a>
+</div>
+
+</body>
+</html>
